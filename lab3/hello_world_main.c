@@ -2,9 +2,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/FreeRTOSConfig.h"
 #include "freertos/task.h"
+#include "esp_log.h"
 
-// #define configUSE_PREEMPTION 1
-// #define configUSE_TIME_SLICING 0
+// #define configUSE_PREEMPTION        1
+// #define configUSE_TIME_SLICING      0
+
+static const char *TAG = "Info";
 
 volatile uint32_t ulIdleCycleCount = 0UL;
 volatile uint32_t task1Counter = 0UL;
@@ -69,6 +72,25 @@ void task_3(void *pvParameter)
     }
 }
 
+void task_monitor(void *pvParameter)
+{
+    int count = 0;
+    while (1)
+    {
+        if (!(count % 10000))
+        {
+            printf("--------------------------------\n");
+            ESP_LOGI(TAG, "Task 1: %d", task1Counter);
+            ESP_LOGI(TAG, "Task 2: %d", task2Counter);
+            ESP_LOGI(TAG, "Task 3: %d", task3Counter);
+            ESP_LOGI(TAG, "Idle Count: %d", ulIdleCycleCount);
+            ESP_LOGI(TAG, "Code: %d", xPortGetCoreID());
+            printf("--------------------------------\n");
+        }
+        count++;
+    }
+}
+
 void app_main()
 {
     printf("Configuration: \n");
@@ -89,6 +111,8 @@ void app_main()
         printf("Co-operative Scheduling\n");
     }
     printf("----------------------------------------------------\n");
+
+    // xTaskCreatePinnedToCore(&task_monitor, "task_monitor", 1024 * 5, NULL, 5, NULL, 1);
 
     if (configUSE_PREEMPTION)
     {
