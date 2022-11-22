@@ -4,17 +4,12 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 
-// #define configUSE_PREEMPTION        1
-// #define configUSE_TIME_SLICING      0
-
-static const char *TAG = "Info";
-
 volatile uint32_t ulIdleCycleCount = 0UL;
 volatile uint32_t task1Counter = 0UL;
 volatile uint32_t task2Counter = 0UL;
 volatile uint32_t task3Counter = 0UL;
 
-void vApplicationTickHook(void) {}
+void vApplicationTickHook(void);
 
 void vApplicationIdleHook(void)
 {
@@ -28,6 +23,10 @@ void task_1(void *pvParameter)
     while (1)
     {
         task1Counter++;
+        if (!configUSE_PREEMPTION && task1Counter == 1000000)
+        {
+            vTaskDelay(0);
+        }
         if (task1Counter >= 5000000)
         {
             int64_t end = esp_timer_get_time();
@@ -75,20 +74,20 @@ void task_3(void *pvParameter)
 void task_monitor(void *pvParameter)
 {
     int count = 0;
-    while (1)
+    while (count < 14000000)
     {
-        if (!(count % 10000))
+        if (!(count % 250000))
         {
             printf("--------------------------------\n");
-            ESP_LOGI(TAG, "Task 1: %d", task1Counter);
-            ESP_LOGI(TAG, "Task 2: %d", task2Counter);
-            ESP_LOGI(TAG, "Task 3: %d", task3Counter);
-            ESP_LOGI(TAG, "Idle Count: %d", ulIdleCycleCount);
-            ESP_LOGI(TAG, "Code: %d", xPortGetCoreID());
+            printf("Task 1: %d \n", task1Counter);
+            printf("Task 2: %d \n", task2Counter);
+            printf("Task 3: %d \n", task3Counter);
+            printf("Idle Count: %d \n", ulIdleCycleCount);
             printf("--------------------------------\n");
         }
         count++;
     }
+    vTaskDelete(NULL);
 }
 
 void app_main()
@@ -112,7 +111,7 @@ void app_main()
     }
     printf("----------------------------------------------------\n");
 
-    // xTaskCreatePinnedToCore(&task_monitor, "task_monitor", 1024 * 5, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(&task_monitor, "task_monitor", 1024 * 5, NULL, 5, NULL, 1);
 
     if (configUSE_PREEMPTION)
     {
@@ -125,7 +124,7 @@ void app_main()
     {
         xTaskCreatePinnedToCore(&task_1, "task 1", 1024 * 5, NULL, tskIDLE_PRIORITY, NULL, 0);
         xTaskCreatePinnedToCore(&task_2, "task 2", 1024 * 5, NULL, tskIDLE_PRIORITY, NULL, 0);
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(150));
         xTaskCreatePinnedToCore(&task_3, "task 3", 1024 * 5, NULL, 5, NULL, 0);
     }
 }
